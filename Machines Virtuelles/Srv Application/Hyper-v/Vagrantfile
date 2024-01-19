@@ -1,0 +1,31 @@
+# -*- mode: ruby -*-
+# vi: set ft=ruby :
+
+Vagrant.configure("2") do |config|
+    (1..2).each do |i|
+      config.vm.define "app-server-#{i}" do |app|
+        app.vm.box = "debian/buster64"
+        app.vm.network "public_network"
+        app.vm.hostname = "app-server-#{i}"
+        app.vm.provider "hyperv"
+        app.vm.provision "shell", inline: <<-SHELL
+          apt-get update
+          apt-get install -y docker.io
+          systemctl start docker
+          systemctl enable docker
+        SHELL
+        app.vm.provision "docker" do |d|
+          d.build_image "/path/to/app/dockerfile/folder", args: "-t myappimage"
+          d.run "myappimage", args: "-d -p 80:80 --name myappcontainer"
+        end
+        # Installation de Webmin
+        app.vm.provision "shell", inline: <<-SHELL
+          wget http://prdownloads.sourceforge.net/webadmin/webmin_1.941_all.deb
+          dpkg --install webmin_1.941_all.deb
+          apt-get install -f
+          systemctl enable webmin
+        SHELL
+      end
+    end
+  end
+  

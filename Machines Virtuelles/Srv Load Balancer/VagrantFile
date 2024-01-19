@@ -1,0 +1,31 @@
+# -*- mode: ruby -*-
+# vi: set ft=ruby :
+
+Vagrant.configure("2") do |config|
+  config.vm.define "load-balancer" do |lb|
+    lb.vm.box = "debian/buster64"
+    lb.vm.network "private_network", ip: "192.168.56.3"
+    lb.vm.hostname = "load-balancer"
+    lb.vm.provider "virtualbox" do |vb|
+      vb.memory = "4096"
+      vb.cpus = 2
+    end
+    lb.vm.provision "shell", inline: <<-SHELL
+      apt-get update
+      apt-get install -y docker.io
+      systemctl start docker
+      systemctl enable docker
+    SHELL
+    lb.vm.provision "docker" do |d|
+      d.build_image "/path/to/nginx/dockerfile/folder", args: "-t mynginximage"
+      d.run "mynginximage", args: "-d -p 80:80 -p 443:443 --name mynginxcontainer"
+    end
+    # Installation de Webmin
+    lb.vm.provision "shell", inline: <<-SHELL
+      wget http://prdownloads.sourceforge.net/webadmin/webmin_1.941_all.deb
+      dpkg --install webmin_1.941_all.deb
+      apt-get install -f
+      systemctl enable webmin
+    SHELL
+  end
+end
